@@ -4,12 +4,15 @@ import './index.css'
 import App from './App.jsx'
 import { ThemeProvider } from './context/ThemeContext'
 import { GameProvider } from './context/GameContext'
+import { MultiplayerProvider } from './context/MultiplayerContext'
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
     <ThemeProvider>
       <GameProvider>
-        <App />
+        <MultiplayerProvider>
+          <App />
+        </MultiplayerProvider>
       </GameProvider>
     </ThemeProvider>
   </StrictMode>,

@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react'
 import { motion } from 'framer-motion'
 import Card from './Card'
 import { useGame } from '../context/GameContext'
+import { useMP } from '../context/MultiplayerContext'
 
 const GRID_CONFIG = {
   easy:   { cols: 4, maxWidth: '420px' },
@@ -12,11 +13,15 @@ const GRID_CONFIG = {
 export default function GameBoard() {
   const {
     cards, flipped, matched, gameStatus, difficulty,
+    matchedPairs, totalPairs, moves, elapsed, isMultiplayer,
     flipCard, checkMatch,
   } = useGame()
 
+  const mp = useMP()
   const checkTimeout = useRef(null)
+  const prevMatchedPairs = useRef(0)
 
+  // When 2 cards are flipped, check for match after a delay
   useEffect(() => {
     if (flipped.length === 2) {
       checkTimeout.current = setTimeout(() => {
@@ -26,7 +31,22 @@ export default function GameBoard() {
     return () => clearTimeout(checkTimeout.current)
   }, [flipped, checkMatch])
 
-  if (gameStatus === 'idle') return null
+  // Emit progress to server whenever matchedPairs changes (multiplayer only)
+  useEffect(() => {
+    if (isMultiplayer && gameStatus === 'playing' && matchedPairs !== prevMatchedPairs.current) {
+      prevMatchedPairs.current = matchedPairs
+      mp.sendProgress(matchedPairs, totalPairs, moves)
+    }
+  }, [matchedPairs, moves, isMultiplayer, gameStatus, totalPairs, mp])
+
+  // Emit game_completed when won in multiplayer
+  useEffect(() => {
+    if (isMultiplayer && gameStatus === 'won') {
+      mp.sendGameCompleted(moves, elapsed)
+    }
+  }, [gameStatus, isMultiplayer, moves, elapsed, mp])
+
+  if (gameStatus === 'idle' || gameStatus === 'lost') return null
 
   const { cols, maxWidth } = GRID_CONFIG[difficulty]
 
