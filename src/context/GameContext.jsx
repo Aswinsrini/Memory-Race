@@ -15,25 +15,28 @@ const initialState = {
   matched: new Set(),  // indices of matched cards
   moves: 0,
   difficulty: 'medium',
-  gameStatus: 'idle',  // idle | playing | won
+  gameStatus: 'idle',  // idle | playing | won | lost
   startTime: null,
   elapsed: 0,
   totalPairs: 0,
   matchedPairs: 0,
+  isMultiplayer: false,
 }
 
 function gameReducer(state, action) {
   switch (action.type) {
     case 'START_GAME': {
-      const pairs = DIFFICULTY[action.difficulty || state.difficulty]
+      const diff = action.difficulty || state.difficulty
+      const pairs = DIFFICULTY[diff]
       const cards = shuffleCards(CARD_EMOJIS.slice(0, pairs))
       return {
         ...initialState,
         cards,
-        difficulty: action.difficulty || state.difficulty,
+        difficulty: diff,
         gameStatus: 'playing',
-        startTime: Date.now(),
+        startTime: action.startTime || Date.now(),
         totalPairs: pairs,
+        isMultiplayer: action.isMultiplayer || false,
       }
     }
 
@@ -46,8 +49,7 @@ function gameReducer(state, action) {
         state.gameStatus !== 'playing'
       ) return state
 
-      const newFlipped = [...state.flipped, index]
-      return { ...state, flipped: newFlipped }
+      return { ...state, flipped: [...state.flipped, index] }
     }
 
     case 'CHECK_MATCH': {
@@ -82,6 +84,10 @@ function gameReducer(state, action) {
     case 'SET_DIFFICULTY':
       return { ...state, difficulty: action.difficulty }
 
+    // Multiplayer: server declared someone else the winner
+    case 'FORCE_LOST':
+      return { ...state, gameStatus: 'lost' }
+
     case 'RESET':
       return { ...initialState }
 
@@ -93,8 +99,13 @@ function gameReducer(state, action) {
 export function GameProvider({ children }) {
   const [state, dispatch] = useReducer(gameReducer, initialState)
 
-  const startGame = useCallback((difficulty) => {
-    dispatch({ type: 'START_GAME', difficulty })
+  const startGame = useCallback((difficulty, opts = {}) => {
+    dispatch({
+      type: 'START_GAME',
+      difficulty,
+      isMultiplayer: opts.isMultiplayer || false,
+      startTime: opts.startTime || undefined,
+    })
   }, [])
 
   const flipCard = useCallback((index) => {
@@ -113,6 +124,10 @@ export function GameProvider({ children }) {
     dispatch({ type: 'RESET' })
   }, [])
 
+  const forceLost = useCallback(() => {
+    dispatch({ type: 'FORCE_LOST' })
+  }, [])
+
   return (
     <GameContext.Provider value={{
       ...state,
@@ -121,6 +136,7 @@ export function GameProvider({ children }) {
       checkMatch,
       setElapsed,
       resetGame,
+      forceLost,
     }}>
       {children}
     </GameContext.Provider>
