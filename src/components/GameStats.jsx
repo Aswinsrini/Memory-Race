@@ -58,8 +58,9 @@ export default function GameStats() {
     return () => clearInterval(timerRef.current)
   }, [gameStatus, startTime, setElapsed])
 
+  // Stop timer when player finishes (solo won or multiplayer completed)
   useEffect(() => {
-    if (gameStatus === 'won') {
+    if (gameStatus === 'won' || gameStatus === 'completed') {
       clearInterval(timerRef.current)
     }
   }, [gameStatus])

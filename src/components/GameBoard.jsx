@@ -20,6 +20,23 @@ export default function GameBoard() {
   const mp = useMP()
   const checkTimeout = useRef(null)
   const prevMatchedPairs = useRef(0)
+  const finishedSentRef = useRef(false)
+
+  // Keep mp functions in refs so useEffects don't re-fire when context changes
+  const sendProgressRef = useRef(mp.sendProgress)
+  const sendPlayerFinishedRef = useRef(mp.sendPlayerFinished)
+  useEffect(() => {
+    sendProgressRef.current = mp.sendProgress
+    sendPlayerFinishedRef.current = mp.sendPlayerFinished
+  })
+
+  // Reset the finishedSent flag when a new game starts
+  useEffect(() => {
+    if (gameStatus === 'playing') {
+      finishedSentRef.current = false
+      prevMatchedPairs.current = 0
+    }
+  }, [gameStatus])
 
   // When 2 cards are flipped, check for match after a delay
   useEffect(() => {
@@ -31,20 +48,21 @@ export default function GameBoard() {
     return () => clearTimeout(checkTimeout.current)
   }, [flipped, checkMatch])
 
-  // Emit progress to server whenever matchedPairs changes (multiplayer only)
+  // Emit progress via Supabase Realtime whenever matchedPairs changes (multiplayer only)
   useEffect(() => {
     if (isMultiplayer && gameStatus === 'playing' && matchedPairs !== prevMatchedPairs.current) {
       prevMatchedPairs.current = matchedPairs
-      mp.sendProgress(matchedPairs, totalPairs, moves)
+      sendProgressRef.current({ matchedPairs, totalPairs, moves })
     }
-  }, [matchedPairs, moves, isMultiplayer, gameStatus, totalPairs, mp])
+  }, [matchedPairs, moves, isMultiplayer, gameStatus, totalPairs])
 
-  // Emit game_completed when won in multiplayer
+  // When player completes all pairs in multiplayer, notify others — ONCE only
   useEffect(() => {
-    if (isMultiplayer && gameStatus === 'won') {
-      mp.sendGameCompleted(moves, elapsed)
+    if (isMultiplayer && gameStatus === 'completed' && !finishedSentRef.current) {
+      finishedSentRef.current = true
+      sendPlayerFinishedRef.current({ moves, elapsed, matchedPairs, totalPairs })
     }
-  }, [gameStatus, isMultiplayer, moves, elapsed, mp])
+  }, [gameStatus, isMultiplayer, moves, elapsed, matchedPairs, totalPairs])
 
   if (gameStatus === 'idle' || gameStatus === 'lost') return null
 

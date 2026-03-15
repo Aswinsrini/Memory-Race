@@ -4,18 +4,18 @@ import { shuffleCards, CARD_EMOJIS } from '../utils/cards'
 const GameContext = createContext()
 
 const DIFFICULTY = {
-  easy: 6,    // 6 pairs = 12 cards
-  medium: 8,  // 8 pairs = 16 cards
-  hard: 12,   // 12 pairs = 24 cards
+  easy: 6,
+  medium: 8,
+  hard: 12,
 }
 
 const initialState = {
   cards: [],
-  flipped: [],        // indices of currently flipped (max 2)
-  matched: new Set(),  // indices of matched cards
+  flipped: [],
+  matched: new Set(),
   moves: 0,
   difficulty: 'medium',
-  gameStatus: 'idle',  // idle | playing | won | lost
+  gameStatus: 'idle', // idle | playing | completed | won | lost | results
   startTime: null,
   elapsed: 0,
   totalPairs: 0,
@@ -48,7 +48,6 @@ function gameReducer(state, action) {
         state.matched.has(index) ||
         state.gameStatus !== 'playing'
       ) return state
-
       return { ...state, flipped: [...state.flipped, index] }
     }
 
@@ -66,7 +65,11 @@ function gameReducer(state, action) {
         matchedPairs += 1
       }
 
-      const won = matchedPairs === state.totalPairs
+      const allDone = matchedPairs === state.totalPairs
+      let newStatus = 'playing'
+      if (allDone) {
+        newStatus = state.isMultiplayer ? 'completed' : 'won'
+      }
 
       return {
         ...state,
@@ -74,17 +77,16 @@ function gameReducer(state, action) {
         matched: newMatched,
         matchedPairs,
         moves: state.moves + 1,
-        gameStatus: won ? 'won' : 'playing',
+        gameStatus: newStatus,
       }
     }
 
     case 'SET_ELAPSED':
       return { ...state, elapsed: action.elapsed }
 
-    case 'SET_DIFFICULTY':
-      return { ...state, difficulty: action.difficulty }
+    case 'SHOW_RESULTS':
+      return { ...state, gameStatus: 'results' }
 
-    // Multiplayer: server declared someone else the winner
     case 'FORCE_LOST':
       return { ...state, gameStatus: 'lost' }
 
@@ -108,35 +110,16 @@ export function GameProvider({ children }) {
     })
   }, [])
 
-  const flipCard = useCallback((index) => {
-    dispatch({ type: 'FLIP_CARD', index })
-  }, [])
-
-  const checkMatch = useCallback(() => {
-    dispatch({ type: 'CHECK_MATCH' })
-  }, [])
-
-  const setElapsed = useCallback((elapsed) => {
-    dispatch({ type: 'SET_ELAPSED', elapsed })
-  }, [])
-
-  const resetGame = useCallback(() => {
-    dispatch({ type: 'RESET' })
-  }, [])
-
-  const forceLost = useCallback(() => {
-    dispatch({ type: 'FORCE_LOST' })
-  }, [])
+  const flipCard = useCallback((index) => dispatch({ type: 'FLIP_CARD', index }), [])
+  const checkMatch = useCallback(() => dispatch({ type: 'CHECK_MATCH' }), [])
+  const setElapsed = useCallback((elapsed) => dispatch({ type: 'SET_ELAPSED', elapsed }), [])
+  const resetGame = useCallback(() => dispatch({ type: 'RESET' }), [])
+  const forceLost = useCallback(() => dispatch({ type: 'FORCE_LOST' }), [])
+  const showResults = useCallback(() => dispatch({ type: 'SHOW_RESULTS' }), [])
 
   return (
     <GameContext.Provider value={{
-      ...state,
-      startGame,
-      flipCard,
-      checkMatch,
-      setElapsed,
-      resetGame,
-      forceLost,
+      ...state, startGame, flipCard, checkMatch, setElapsed, resetGame, forceLost, showResults,
     }}>
       {children}
     </GameContext.Provider>

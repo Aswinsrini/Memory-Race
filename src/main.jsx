@@ -5,15 +5,18 @@ import App from './App.jsx'
 import { ThemeProvider } from './context/ThemeContext'
 import { GameProvider } from './context/GameContext'
 import { MultiplayerProvider } from './context/MultiplayerContext'
+import { AuthProvider } from './context/AuthContext'
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
     <ThemeProvider>
-      <GameProvider>
-        <MultiplayerProvider>
-          <App />
-        </MultiplayerProvider>
-      </GameProvider>
+      <AuthProvider>
+        <GameProvider>
+          <MultiplayerProvider>
+            <App />
+          </MultiplayerProvider>
+        </GameProvider>
+      </AuthProvider>
     </ThemeProvider>
   </StrictMode>,
 )
