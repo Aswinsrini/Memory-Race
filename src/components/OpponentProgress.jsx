@@ -1,12 +1,14 @@
 import { motion } from 'framer-motion'
 import { useMP } from '../context/MultiplayerContext'
+import { useAuth } from '../context/AuthContext'
 
 export default function OpponentProgress() {
-  const { players, myId, multiplayerPhase } = useMP()
+  const { players, opponentProgress, multiplayerPhase } = useMP()
+  const { user } = useAuth()
 
   if (multiplayerPhase !== 'playing' || players.length < 2) return null
 
-  const opponents = players.filter(p => p.id !== myId)
+  const opponents = players.filter(p => (p.id || p.user_id) !== user?.id)
 
   return (
     <motion.div
@@ -32,13 +34,15 @@ export default function OpponentProgress() {
       }}>Opponents</p>
 
       {opponents.map(opp => {
-        const progress = opp.totalPairs > 0
-          ? (opp.matchedPairs / opp.totalPairs) * 100
-          : 0
+        const oppId = opp.id || opp.user_id
+        const prog = opponentProgress[oppId] || {}
+        const matchedPairs = prog.matchedPairs || 0
+        const totalPairs = prog.totalPairs || 1
+        const progress = totalPairs > 0 ? (matchedPairs / totalPairs) * 100 : 0
 
         return (
           <div
-            key={opp.id}
+            key={oppId}
             style={{
               display: 'flex',
               alignItems: 'center',
@@ -48,14 +52,14 @@ export default function OpponentProgress() {
             <span style={{
               fontSize: '0.75rem',
               fontWeight: 600,
-              color: 'var(--text-secondary)',
+              color: prog.finished ? 'var(--success)' : 'var(--text-secondary)',
               minWidth: '70px',
               textAlign: 'right',
               overflow: 'hidden',
               textOverflow: 'ellipsis',
               whiteSpace: 'nowrap',
             }}>
-              {opp.username}
+              {opp.username} {prog.finished ? '✓' : ''}
             </span>
 
             {/* Progress bar */}
@@ -72,7 +76,9 @@ export default function OpponentProgress() {
                 style={{
                   height: '100%',
                   borderRadius: '100px',
-                  background: 'linear-gradient(90deg, #f59e0b, #ef4444)',
+                  background: prog.finished
+                    ? 'linear-gradient(90deg, var(--success), #34d399)'
+                    : 'linear-gradient(90deg, #f59e0b, #ef4444)',
                 }}
                 initial={{ width: 0 }}
                 animate={{ width: `${progress}%` }}
@@ -86,7 +92,7 @@ export default function OpponentProgress() {
               color: 'var(--text-muted)',
               minWidth: '36px',
             }}>
-              {opp.matchedPairs}/{opp.totalPairs}
+              {matchedPairs}/{totalPairs}
             </span>
           </div>
         )

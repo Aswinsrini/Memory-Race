@@ -1,14 +1,13 @@
 import { motion } from 'framer-motion'
-import { Copy, Check, Users, Crown, LogOut, Loader2 } from 'lucide-react'
+import { Copy, Check, Users, Crown, LogOut, Loader2, Play } from 'lucide-react'
 import { useState } from 'react'
 import { useMP } from '../context/MultiplayerContext'
+import { useAuth } from '../context/AuthContext'
 
 export default function MultiplayerLobby() {
-  const { roomCode, players, myId, toggleReady, leaveRoom, countdown, multiplayerPhase } = useMP()
+  const { roomCode, players, isHost, leaveRoom, startGame, countdown, multiplayerPhase, difficulty } = useMP()
+  const { user } = useAuth()
   const [copied, setCopied] = useState(false)
-
-  const me = players.find(p => p.id === myId)
-  const amReady = me?.ready || false
 
   const handleCopy = async () => {
     try {
@@ -116,6 +115,16 @@ export default function MultiplayerLobby() {
         </p>
       </div>
 
+      {/* Difficulty badge */}
+      <div style={{
+        fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase',
+        letterSpacing: '0.1em', color: 'var(--accent)',
+        padding: '0.3rem 0.8rem', borderRadius: '100px',
+        background: 'var(--bg-secondary)', border: '1px solid var(--border)',
+      }}>
+        {difficulty} mode
+      </div>
+
       {/* Player List */}
       <div style={{ width: '100%' }}>
         <div style={{
@@ -132,13 +141,13 @@ export default function MultiplayerLobby() {
             textTransform: 'uppercase',
             letterSpacing: '0.12em',
             color: 'var(--text-muted)',
-          }}>Players ({players.length}/6)</p>
+          }}>Players ({players.length}/10)</p>
         </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
           {players.map((player, idx) => (
             <motion.div
-              key={player.id}
+              key={player.id || player.user_id}
               className="glass"
               style={{
                 display: 'flex',
@@ -146,21 +155,21 @@ export default function MultiplayerLobby() {
                 justifyContent: 'space-between',
                 padding: '0.65rem 1rem',
                 borderRadius: '12px',
-                border: player.id === myId ? '1.5px solid var(--accent)' : undefined,
+                border: (player.id || player.user_id) === user?.id ? '1.5px solid var(--accent)' : undefined,
               }}
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: idx * 0.08 }}
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                {idx === 0 && <Crown size={14} style={{ color: '#f59e0b' }} />}
+                {player.is_host && <Crown size={14} style={{ color: '#f59e0b' }} />}
                 <span style={{
                   fontSize: '0.85rem',
                   fontWeight: 600,
                   color: 'var(--text-primary)',
                 }}>
                   {player.username}
-                  {player.id === myId && (
+                  {(player.id || player.user_id) === user?.id && (
                     <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)', marginLeft: '0.35rem' }}>(you)</span>
                   )}
                 </span>
@@ -170,10 +179,10 @@ export default function MultiplayerLobby() {
                 fontWeight: 700,
                 padding: '0.2rem 0.6rem',
                 borderRadius: '100px',
-                background: player.ready ? 'var(--success)' : 'var(--bg-secondary)',
-                color: player.ready ? '#fff' : 'var(--text-muted)',
+                background: 'var(--success)',
+                color: '#fff',
               }}>
-                {player.ready ? 'Ready' : 'Waiting'}
+                Joined
               </span>
             </motion.div>
           ))}
@@ -196,16 +205,26 @@ export default function MultiplayerLobby() {
 
       {/* Action buttons */}
       <div style={{ display: 'flex', gap: '0.75rem', width: '100%' }}>
-        <motion.button
-          onClick={toggleReady}
-          className={`btn ${amReady ? 'btn-secondary' : 'btn-primary'}`}
-          style={{ flex: 1, opacity: players.length < 2 ? 0.5 : 1 }}
-          disabled={players.length < 2}
-          whileHover={players.length >= 2 ? { scale: 1.03 } : {}}
-          whileTap={players.length >= 2 ? { scale: 0.97 } : {}}
-        >
-          {amReady ? 'Unready' : 'Ready Up'}
-        </motion.button>
+        {isHost ? (
+          <motion.button
+            onClick={startGame}
+            className="btn btn-primary"
+            style={{ flex: 1, opacity: players.length < 2 ? 0.5 : 1 }}
+            disabled={players.length < 2}
+            whileHover={players.length >= 2 ? { scale: 1.03 } : {}}
+            whileTap={players.length >= 2 ? { scale: 0.97 } : {}}
+          >
+            <Play size={16} />
+            Start Game
+          </motion.button>
+        ) : (
+          <div style={{
+            flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: 600,
+          }}>
+            Waiting for host to start...
+          </div>
+        )}
         <motion.button
           onClick={leaveRoom}
           className="btn btn-secondary"
@@ -215,12 +234,6 @@ export default function MultiplayerLobby() {
           <LogOut size={16} />
         </motion.button>
       </div>
-
-      {players.length >= 2 && (
-        <p style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textAlign: 'center' }}>
-          Game starts when all players are ready
-        </p>
-      )}
     </motion.div>
   )
 }
