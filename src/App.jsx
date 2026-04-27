@@ -9,6 +9,7 @@ import GameOverScreen from './components/GameOverScreen'
 import OpponentProgress from './components/OpponentProgress'
 import GameResultsDashboard from './components/GameResultsDashboard'
 import WaitingForPlayers from './components/WaitingForPlayers'
+import FooterAction from './components/FooterAction'
 import SignIn from './pages/SignIn'
 import SignUp from './pages/SignUp'
 import Profile from './pages/Profile'
@@ -121,6 +122,7 @@ function App() {
                 <GameStats />
                 <OpponentProgress />
                 <GameBoard />
+                <FooterAction />
               </>
             )}
 
