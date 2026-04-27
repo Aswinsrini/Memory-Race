@@ -4,7 +4,7 @@ import { useGame } from '../context/GameContext'
 import ConfirmDialog from './ConfirmDialog'
 
 export default function FooterAction() {
-  const { resetGame } = useGame()
+  const { resetGame, isMultiplayer } = useGame()
   const [showConfirm, setShowConfirm] = useState(false)
 
   const handleAbortClick = () => {
@@ -19,6 +19,9 @@ export default function FooterAction() {
   const handleCancelAbort = () => {
     setShowConfirm(false)
   }
+
+  // Hide abort button for multiplayer games
+  if (isMultiplayer) return null
 
   return (
     <>
